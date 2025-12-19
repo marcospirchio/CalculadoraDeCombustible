@@ -281,93 +281,106 @@ export default function ResultsPanel({
       </div>
 
       {/* Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {/* Distance */}
-        <Card className="bg-white border border-slate-200 shadow-sm">
-          <CardHeader className="pb-2 pt-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xs font-medium text-slate-600">Distancia</CardTitle>
-              <TrendingUp className="w-4 h-4 text-blue-600" />
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
+          <CardContent className="p-3">
+            <div className="flex flex-col items-center text-center space-y-1.5">
+              <div className="p-1.5 bg-blue-500/10 rounded-full">
+                <TrendingUp className="w-4 h-4 text-blue-600" />
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-xl font-bold text-slate-900">
+                  {results.distance.replace(".", ",")}
+                </p>
+                <p className="text-xs font-medium text-slate-600 uppercase tracking-wide">km</p>
+              </div>
+              <p className="text-xs text-slate-500 font-medium">Distancia</p>
             </div>
-          </CardHeader>
-          <CardContent className="pt-0 pb-3">
-            <p className="text-xl font-bold text-slate-800">
-              {results.distance}
-              <span className="text-xs font-normal ml-1">km</span>
-            </p>
           </CardContent>
         </Card>
 
         {/* Duration */}
-        <Card className="bg-white border border-slate-200 shadow-sm">
-          <CardHeader className="pb-2 pt-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xs font-medium text-slate-600">Duración</CardTitle>
-              <Clock className="w-4 h-4 text-blue-600" />
+        <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100/50 border border-indigo-200 shadow-sm hover:shadow-md transition-shadow">
+          <CardContent className="p-3">
+            <div className="flex flex-col items-center text-center space-y-1.5">
+              <div className="p-1.5 bg-indigo-500/10 rounded-full">
+                <Clock className="w-4 h-4 text-indigo-600" />
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-xl font-bold text-slate-900">{results.duration}</p>
+                <p className="text-xs font-medium text-slate-600 uppercase tracking-wide">Tiempo</p>
+              </div>
+              <p className="text-xs text-slate-500 font-medium">Duración</p>
             </div>
-          </CardHeader>
-          <CardContent className="pt-0 pb-3">
-            <p className="text-xl font-bold text-slate-800">{results.duration}</p>
           </CardContent>
         </Card>
 
         {/* Consumption */}
-        <Card className="bg-white border border-slate-200 shadow-sm">
-          <CardHeader className="pb-2 pt-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xs font-medium text-slate-600">Consumo</CardTitle>
-              <AlertCircle className="w-4 h-4 text-amber-500" />
+        <Card className="bg-gradient-to-br from-amber-50 to-amber-100/50 border border-amber-200 shadow-sm hover:shadow-md transition-shadow">
+          <CardContent className="p-3">
+            <div className="flex flex-col items-center text-center space-y-1.5">
+              <div className="p-1.5 bg-amber-500/10 rounded-full">
+                <AlertCircle className="w-4 h-4 text-amber-600" />
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-xl font-bold text-slate-900">
+                  {formatConsumption(results.consumption)}
+                </p>
+                <p className="text-xs font-medium text-slate-600 uppercase tracking-wide">L/100km</p>
+              </div>
+              <p className="text-xs text-slate-500 font-medium">Consumo</p>
             </div>
-          </CardHeader>
-          <CardContent className="pt-0 pb-3">
-            <p className="text-xl font-bold text-slate-800">
-              <span>{formatConsumption(results.consumption)}</span>
-              <span className="text-xs font-normal ml-1">L/100km</span>
-            </p>
           </CardContent>
         </Card>
 
         {/* Liters */}
-        <Card className="bg-white border border-slate-200 shadow-sm">
-          <CardHeader className="pb-2 pt-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xs font-medium text-slate-600">Litros</CardTitle>
-              <Droplet className="w-4 h-4 text-cyan-500" />
+        <Card className="bg-gradient-to-br from-cyan-50 to-cyan-100/50 border border-cyan-200 shadow-sm hover:shadow-md transition-shadow">
+          <CardContent className="p-3">
+            <div className="flex flex-col items-center text-center space-y-1.5">
+              <div className="p-1.5 bg-cyan-500/10 rounded-full">
+                <Droplet className="w-4 h-4 text-cyan-600" />
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-xl font-bold text-slate-900">
+                  {results.litersNeeded.replace(".", ",")}
+                </p>
+                <p className="text-xs font-medium text-slate-600 uppercase tracking-wide">Litros</p>
+              </div>
+              <p className="text-xs text-slate-500 font-medium">Combustible</p>
             </div>
-          </CardHeader>
-          <CardContent className="pt-0 pb-3">
-            <p className="text-xl font-bold text-slate-800">
-              {results.litersNeeded}
-              <span className="text-xs font-normal ml-1">L</span>
-            </p>
           </CardContent>
         </Card>
 
         {/* Total - spans 1 column on desktop */}
-        <Card className="bg-green-50 border border-green-300 shadow-sm">
-          <CardHeader className="pb-2 pt-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xs font-medium text-green-700">Total</CardTitle>
-              <DollarSign className="w-4 h-4 text-green-600" />
+        <Card className="bg-gradient-to-br from-green-100 to-green-200/50 border-2 border-green-400 shadow-md hover:shadow-lg transition-shadow col-span-2 md:col-span-3 lg:col-span-1">
+          <CardContent className="p-3">
+            <div className="flex flex-col items-center text-center space-y-1.5">
+              <div className="p-1.5 bg-green-500/20 rounded-full">
+                <DollarSign className="w-4 h-4 text-green-700" />
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-xl font-bold text-green-700">$ {results.totalCost.replace(".", ",")}</p>
+                <p className="text-xs font-semibold text-green-600 uppercase tracking-wide">Total del Viaje</p>
+              </div>
             </div>
-          </CardHeader>
-          <CardContent className="pt-0 pb-3">
-            <p className="text-xl font-bold text-green-600">$ {results.totalCost}</p>
           </CardContent>
         </Card>
 
         {/* Cost per Person */}
         {passengers > 1 && (
-          <Card className="bg-purple-50 border border-purple-300 shadow-sm">
-            <CardHeader className="pb-2 pt-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xs font-medium text-purple-700">Costo por Persona</CardTitle>
-                <Users className="w-4 h-4 text-purple-600" />
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200 shadow-sm hover:shadow-md transition-shadow col-span-2 md:col-span-3 lg:col-span-5">
+            <CardContent className="p-3">
+              <div className="flex flex-col items-center text-center space-y-1.5">
+                <div className="p-1.5 bg-purple-500/10 rounded-full">
+                  <Users className="w-4 h-4 text-purple-600" />
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xl font-bold text-purple-700">$ {costPerPerson.replace(".", ",")}</p>
+                  <p className="text-xs font-medium text-purple-600">por persona ({passengers} pasajeros)</p>
+                </div>
+                <p className="text-xs text-slate-500 font-medium">Costo por Persona</p>
               </div>
-            </CardHeader>
-            <CardContent className="pt-0 pb-3">
-              <p className="text-xl font-bold text-purple-600">$ {costPerPerson}</p>
-              <p className="text-xs text-purple-600 mt-0.5">({passengers} pasajeros)</p>
             </CardContent>
           </Card>
         )}

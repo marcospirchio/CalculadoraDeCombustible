@@ -15,9 +15,11 @@ import {
 } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { Loader2, ChevronDown, CalendarIcon, Clock, ArrowUpDown } from "lucide-react"
+import { Loader2, ChevronDown, CalendarIcon, Clock, ArrowUpDown, Bookmark, Menu, Trash2 } from "lucide-react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { toast } from "sonner"
 import PlacesAutocomplete from "@/components/places-autocomplete"
 import ResultsPanel from "@/components/results-panel"
 import { vehicles } from "@/lib/vehicles"
@@ -54,6 +56,24 @@ export default function Home() {
   } | null>(null)
   const [timeType, setTimeType] = useState<"now" | "departure" | "arrival">("now")
   const [selectedDateTime, setSelectedDateTime] = useState<Date | undefined>(undefined)
+  const [savedTrips, setSavedTrips] = useState<Array<{
+    id: string
+    origin: { lat: number; lng: number }
+    destination: { lat: number; lng: number }
+    originAddress: string
+    destinationAddress: string
+    selectedBrand: string
+    selectedModel: string
+    customConsumption: string
+    fuelPrice: string
+    passengers: number
+    isRoundTrip: boolean
+    hasTelepase: boolean
+    timeType: "now" | "departure" | "arrival"
+    selectedDateTime?: string
+    savedAt: string
+  }>>([])
+  const [sheetOpen, setSheetOpen] = useState(false)
 
   useEffect(() => {
     const script = document.createElement("script")
@@ -64,6 +84,21 @@ export default function Home() {
       setGoogleScriptReady(true)
     }
     document.head.appendChild(script)
+  }, [])
+
+  // Load saved trips from localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("rutear_history")
+      if (stored) {
+        try {
+          const trips = JSON.parse(stored)
+          setSavedTrips(trips)
+        } catch (error) {
+          console.error("Error loading saved trips:", error)
+        }
+      }
+    }
   }, [])
 
   const handleCalculate = async (customOrigin?: { lat: number; lng: number } | null, customDestination?: { lat: number; lng: number } | null) => {
@@ -284,6 +319,256 @@ export default function Home() {
     })
   }
 
+  // Save trip to localStorage
+  const handleSaveTrip = () => {
+    if (!origin || !destination) {
+      toast.error("Por favor selecciona origen y destino antes de guardar")
+      return
+    }
+
+    const trip = {
+      id: `trip_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      origin,
+      destination,
+      originAddress,
+      destinationAddress,
+      selectedBrand,
+      selectedModel,
+      customConsumption,
+      fuelPrice,
+      passengers,
+      isRoundTrip,
+      hasTelepase,
+      timeType,
+      selectedDateTime: selectedDateTime?.toISOString(),
+      savedAt: new Date().toISOString(),
+    }
+
+    const updatedTrips = [trip, ...savedTrips]
+    setSavedTrips(updatedTrips)
+    localStorage.setItem("rutear_history", JSON.stringify(updatedTrips))
+    toast.success("Viaje guardado")
+  }
+
+  // Load trip from saved trips
+  const handleLoadTrip = async (trip: typeof savedTrips[0]) => {
+    // Set all form states first
+    setOrigin(trip.origin)
+    setDestination(trip.destination)
+    setOriginAddress(trip.originAddress)
+    setDestinationAddress(trip.destinationAddress)
+    setSelectedBrand(trip.selectedBrand)
+    setSelectedModel(trip.selectedModel)
+    setCustomConsumption(trip.customConsumption)
+    setFuelPrice(trip.fuelPrice)
+    setPassengers(trip.passengers)
+    setPassengersInput(String(trip.passengers))
+    setIsRoundTrip(trip.isRoundTrip)
+    setHasTelepase(trip.hasTelepase)
+    setTimeType(trip.timeType)
+    if (trip.selectedDateTime) {
+      setSelectedDateTime(new Date(trip.selectedDateTime))
+    } else {
+      setSelectedDateTime(undefined)
+    }
+    
+    setSheetOpen(false)
+    toast.success("Viaje cargado")
+    
+    // Calculate using trip data directly (don't wait for state updates)
+    // We need to calculate consumption from trip data
+    let consumption: number | null = null
+    
+    if (trip.customConsumption) {
+      const normalizedConsumption = trip.customConsumption.replace(",", ".")
+      consumption = Number.parseFloat(normalizedConsumption)
+    } else if (trip.selectedModel && trip.selectedBrand) {
+      const brand = SORTED_VEHICLES.find((v) => v.brand === trip.selectedBrand)
+      if (brand) {
+        const model = brand.models.find((m) => m.name === trip.selectedModel)
+        consumption = model?.avgConsumptionLPer100km || null
+      }
+    }
+    
+    if (!consumption || Number.isNaN(consumption) || consumption <= 0) {
+      toast.error("Error: consumo inválido en el viaje guardado")
+      return
+    }
+    
+    // Use a small delay to ensure states are set, then calculate
+    setTimeout(async () => {
+      await handleCalculateWithData(
+        trip.origin,
+        trip.destination,
+        consumption,
+        Number.parseFloat(trip.fuelPrice),
+        trip.timeType,
+        trip.selectedDateTime ? new Date(trip.selectedDateTime) : undefined,
+        trip.isRoundTrip,
+        trip.hasTelepase
+      )
+    }, 150)
+  }
+  
+  // Helper function to calculate with explicit data (for loading saved trips)
+  const handleCalculateWithData = async (
+    originData: { lat: number; lng: number },
+    destinationData: { lat: number; lng: number },
+    consumptionData: number,
+    fuelPriceData: number,
+    timeTypeData: "now" | "departure" | "arrival",
+    selectedDateTimeData?: Date,
+    roundTripData?: boolean,
+    telepaseData?: boolean
+  ) => {
+    setError("")
+    setLoading(true)
+
+    try {
+      if (!originData || !destinationData) {
+        setError("Por favor selecciona origen y destino")
+        setLoading(false)
+        return
+      }
+
+      if (!consumptionData || Number.isNaN(consumptionData) || consumptionData <= 0) {
+        setError("Por favor ingresa un consumo válido del vehículo")
+        setLoading(false)
+        return
+      }
+
+      if ((timeTypeData === "departure" || timeTypeData === "arrival") && !selectedDateTimeData) {
+        setError("Por favor selecciona una fecha y hora para el viaje")
+        setLoading(false)
+        return
+      }
+
+      const requestBody: any = {
+        origin: {
+          location: {
+            latLng: {
+              latitude: originData.lat,
+              longitude: originData.lng,
+            },
+          },
+        },
+        destination: {
+          location: {
+            latLng: {
+              latitude: destinationData.lat,
+              longitude: destinationData.lng,
+            },
+          },
+        },
+        travelMode: "DRIVE",
+        extraComputations: ["TOLLS"],
+      }
+
+      if (timeTypeData === "now") {
+        const futureTime = new Date()
+        futureTime.setMinutes(futureTime.getMinutes() + 1)
+        requestBody.departureTime = futureTime.toISOString()
+        requestBody.routingPreference = "TRAFFIC_AWARE"
+      } else if (timeTypeData === "departure" && selectedDateTimeData) {
+        requestBody.departureTime = selectedDateTimeData.toISOString()
+        requestBody.routingPreference = "TRAFFIC_AWARE"
+      } else if (timeTypeData === "arrival" && selectedDateTimeData) {
+        requestBody.arrivalTime = selectedDateTimeData.toISOString()
+      }
+
+      const routeResponse = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": API_KEY,
+          "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.travelAdvisory.tollInfo,routes.polyline",
+        },
+        body: JSON.stringify(requestBody),
+      })
+
+      if (!routeResponse.ok) {
+        let errorMessage = "Error al calcular la ruta. Verifica tu API Key y que tenga las APIs habilitadas."
+        try {
+          const errorData = await routeResponse.json()
+          console.error("API Error:", errorData)
+          if (errorData.error?.message) {
+            errorMessage = `Error: ${errorData.error.message}`
+          } else if (errorData.message) {
+            errorMessage = `Error: ${errorData.message}`
+          }
+        } catch (e) {
+          console.error("Error parsing response:", e)
+        }
+        setError(errorMessage)
+        setLoading(false)
+        return
+      }
+
+      const routeData = await routeResponse.json()
+      if (!routeData.routes || routeData.routes.length === 0) {
+        setError("No se encontró ruta entre los puntos seleccionados")
+        setLoading(false)
+        return
+      }
+
+      const route = routeData.routes[0]
+      const distanceMeters = route.distanceMeters
+      const baseDistanceKm = distanceMeters / 1000
+      const polyline = route.polyline?.encodedPolyline || null
+      setRoutePolyline(polyline)
+
+      let baseTollCost = 0
+      if (route.travelAdvisory?.tollInfo?.estimatedPrice) {
+        const prices = route.travelAdvisory.tollInfo.estimatedPrice
+        console.log("Precios encontrados:", prices)
+        if (Array.isArray(prices) && prices.length > 0) {
+          const priceCosts = prices.map((priceData) => {
+            const units = Number(priceData.units) || 0
+            const nanos = Number(priceData.nanos) || 0
+            return units + nanos / 1e9
+          })
+          baseTollCost = Math.min(...priceCosts)
+        }
+      }
+
+      const durationString = route.duration || "0s"
+      const durationMatch = durationString.match(/(\d+)s/)
+      const baseDurationSeconds = durationMatch ? Number.parseInt(durationMatch[1]) : 0
+
+      setBaseRouteData({
+        distanceKm: baseDistanceKm,
+        tollCost: baseTollCost,
+        durationSeconds: baseDurationSeconds,
+        consumption: consumptionData,
+        fuelPrice: fuelPriceData,
+      })
+
+      calculateResultsFromBase(
+        baseDistanceKm,
+        baseTollCost,
+        baseDurationSeconds,
+        consumptionData,
+        fuelPriceData,
+        roundTripData || false,
+        telepaseData || false
+      )
+    } catch (err) {
+      console.error("[v0] Calculation error:", err)
+      setError("Error al calcular el viaje. Intenta nuevamente.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Delete trip from saved trips
+  const handleDeleteTrip = (tripId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const updatedTrips = savedTrips.filter((trip) => trip.id !== tripId)
+    setSavedTrips(updatedTrips)
+    localStorage.setItem("rutear_history", JSON.stringify(updatedTrips))
+    toast.success("Viaje eliminado")
+  }
+
   // Recalculate results when round trip toggle or telepase changes
   useEffect(() => {
     if (baseRouteData) {
@@ -328,8 +613,64 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-slate-200">
       <header className="sticky top-0 z-50 border-b border-slate-300 bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-3 flex items-center justify-center">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-3 flex items-center justify-between">
           <img src="/rutear_logo.png" alt="RuteAR Logo" className="h-16 w-auto drop-shadow-lg" />
+          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-10 w-10">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Mis Viajes</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle>Mis Viajes Guardados</SheetTitle>
+                <SheetDescription>
+                  Selecciona un viaje para cargar sus datos o elimínalo si ya no lo necesitas.
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-6 space-y-3 max-h-[calc(100vh-150px)] overflow-y-auto">
+                {savedTrips.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500">
+                    <p>No tienes viajes guardados aún.</p>
+                    <p className="text-sm mt-2">Guarda un viaje usando el botón de marcador.</p>
+                  </div>
+                ) : (
+                  savedTrips.map((trip) => (
+                    <div
+                      key={trip.id}
+                      onClick={() => handleLoadTrip(trip)}
+                      className="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors relative group"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                            <p className="text-sm font-medium text-slate-900 truncate">{trip.originAddress}</p>
+                          </div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="h-2 w-2 rounded-full bg-red-500"></div>
+                            <p className="text-sm font-medium text-slate-900 truncate">{trip.destinationAddress}</p>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-2">
+                            {format(new Date(trip.savedAt), "PPP 'a las' HH:mm", { locale: es })}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-slate-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => handleDeleteTrip(trip.id, e)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </header>
 
@@ -725,20 +1066,31 @@ export default function Home() {
                   <Switch id="telepase" checked={hasTelepase} onCheckedChange={setHasTelepase} />
                 </div>
 
-                <Button
-                  onClick={() => handleCalculate()}
-                  disabled={loading || !origin || !destination}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-md transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Calculando...
-                    </>
-                  ) : (
-                    "Calcular"
-                  )}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => handleCalculate()}
+                    disabled={loading || !origin || !destination}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-md transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Calculando...
+                      </>
+                    ) : (
+                      "Calcular"
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleSaveTrip}
+                    disabled={!origin || !destination}
+                    variant="outline"
+                    className="py-2.5 px-4 border-slate-300 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-all shadow-md hover:shadow-lg"
+                    title="Guardar viaje"
+                  >
+                    <Bookmark className="h-5 w-5 text-slate-600" />
+                  </Button>
+                </div>
 
                 {error && (
                   <div className="text-red-700 text-sm bg-red-50 p-3 rounded-md border border-red-300">{error}</div>
