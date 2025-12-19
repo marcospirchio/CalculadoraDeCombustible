@@ -5,8 +5,10 @@ import { Input } from "@/components/ui/input"
 
 interface PlacesAutocompleteProps {
   apiKey: string
-  onLocationSelect: (location: { lat: number; lng: number }) => void
+  onLocationSelect: (location: { lat: number; lng: number }, address: string) => void
   placeholder?: string
+  value?: string
+  resetKey?: string
 }
 
 declare global {
@@ -19,8 +21,10 @@ export default function PlacesAutocomplete({
   apiKey,
   onLocationSelect,
   placeholder = "Ingresa una dirección...",
+  value,
+  resetKey,
 }: PlacesAutocompleteProps) {
-  const [input, setInput] = useState("")
+  const [input, setInput] = useState(value || "")
   const [suggestions, setSuggestions] = useState<any[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -29,6 +33,13 @@ export default function PlacesAutocomplete({
   const containerRef = useRef<HTMLDivElement>(null)
   const autocompleteServiceRef = useRef<any>(null)
   const placesServiceRef = useRef<any>(null)
+
+  // Sync with external value prop
+  useEffect(() => {
+    if (value !== undefined) {
+      setInput(value)
+    }
+  }, [value, resetKey])
 
   useEffect(() => {
     if (!apiKey) return
@@ -115,15 +126,21 @@ export default function PlacesAutocomplete({
       placesServiceRef.current.getDetails(
         {
           placeId: placeId,
-          fields: ["geometry", "name"],
+          fields: ["geometry", "name", "formatted_address"],
         },
         (place: any, status: any) => {
           if (status === window.google.maps.places.PlacesServiceStatus.OK && place.geometry) {
             console.log("[v0] Place details received:", place.geometry.location)
-            onLocationSelect({
-              lat: place.geometry.location.lat(),
-              lng: place.geometry.location.lng(),
-            })
+            const address = place.name || place.formatted_address || description
+            onLocationSelect(
+              {
+                lat: place.geometry.location.lat(),
+                lng: place.geometry.location.lng(),
+              },
+              address
+            )
+            // Ensure the input shows the selected address
+            setInput(address)
           } else {
             console.error("[v0] Failed to get place details:", status)
           }
