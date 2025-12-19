@@ -71,6 +71,7 @@ export default function Home() {
     hasTelepase: boolean
     timeType: "now" | "departure" | "arrival"
     selectedDateTime?: string
+    totalCost?: string
     savedAt: string
   }>>([])
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -319,10 +320,86 @@ export default function Home() {
     })
   }
 
-  // Save trip to localStorage
+  // Check if current trip is already saved
+  const isCurrentTripSaved = () => {
+    if (!origin || !destination) return false
+    
+    return savedTrips.some((trip) => {
+      const originMatch = 
+        Math.abs(trip.origin.lat - origin.lat) < 0.0001 &&
+        Math.abs(trip.origin.lng - origin.lng) < 0.0001
+      const destMatch = 
+        Math.abs(trip.destination.lat - destination.lat) < 0.0001 &&
+        Math.abs(trip.destination.lng - destination.lng) < 0.0001
+      
+      return (
+        originMatch &&
+        destMatch &&
+        trip.selectedBrand === selectedBrand &&
+        trip.selectedModel === selectedModel &&
+        trip.customConsumption === customConsumption &&
+        trip.fuelPrice === fuelPrice &&
+        trip.passengers === passengers &&
+        trip.isRoundTrip === isRoundTrip &&
+        trip.hasTelepase === hasTelepase &&
+        trip.timeType === timeType &&
+        trip.selectedDateTime === (selectedDateTime?.toISOString() || undefined)
+      )
+    })
+  }
+
+  // Find saved trip ID that matches current trip
+  const findSavedTripId = () => {
+    if (!origin || !destination) return null
+    
+    const foundTrip = savedTrips.find((trip) => {
+      const originMatch = 
+        Math.abs(trip.origin.lat - origin.lat) < 0.0001 &&
+        Math.abs(trip.origin.lng - origin.lng) < 0.0001
+      const destMatch = 
+        Math.abs(trip.destination.lat - destination.lat) < 0.0001 &&
+        Math.abs(trip.destination.lng - destination.lng) < 0.0001
+      
+      return (
+        originMatch &&
+        destMatch &&
+        trip.selectedBrand === selectedBrand &&
+        trip.selectedModel === selectedModel &&
+        trip.customConsumption === customConsumption &&
+        trip.fuelPrice === fuelPrice &&
+        trip.passengers === passengers &&
+        trip.isRoundTrip === isRoundTrip &&
+        trip.hasTelepase === hasTelepase &&
+        trip.timeType === timeType &&
+        trip.selectedDateTime === (selectedDateTime?.toISOString() || undefined)
+      )
+    })
+    
+    return foundTrip?.id || null
+  }
+
+  // Save trip to localStorage (toggle: save if not saved, unsave if already saved)
   const handleSaveTrip = () => {
     if (!origin || !destination) {
       toast.error("Por favor selecciona origen y destino antes de guardar")
+      return
+    }
+
+    // If trip is already saved, remove it
+    if (isCurrentTripSaved()) {
+      const tripId = findSavedTripId()
+      if (tripId) {
+        const updatedTrips = savedTrips.filter((trip) => trip.id !== tripId)
+        setSavedTrips(updatedTrips)
+        localStorage.setItem("rutear_history", JSON.stringify(updatedTrips))
+        toast.success("Viaje eliminado")
+        return
+      }
+    }
+
+    // If trip is not saved, save it
+    if (!results || !results.totalCost) {
+      toast.error("Por favor calcula el viaje antes de guardarlo")
       return
     }
 
@@ -341,6 +418,7 @@ export default function Home() {
       hasTelepase,
       timeType,
       selectedDateTime: selectedDateTime?.toISOString(),
+      totalCost: results.totalCost,
       savedAt: new Date().toISOString(),
     }
 
@@ -617,8 +695,8 @@ export default function Home() {
           <img src="/rutear_logo.png" alt="RuteAR Logo" className="h-16 w-auto drop-shadow-lg" />
           <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-10 w-10">
-                <Menu className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className="h-10 w-10 hover:bg-slate-100 hover:text-slate-900">
+                <Menu className="h-5 w-5 text-slate-900" />
                 <span className="sr-only">Mis Viajes</span>
               </Button>
             </SheetTrigger>
@@ -643,14 +721,32 @@ export default function Home() {
                       className="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors relative group"
                     >
                       <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                            <p className="text-sm font-medium text-slate-900 truncate">{trip.originAddress}</p>
+                        <div className="flex-1 min-w-0 pr-5">
+                          <div className="flex items-start justify-between gap-4 mb-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Origen</p>
+                              <p className="text-sm font-medium text-slate-900 truncate">{trip.originAddress}</p>
+                            </div>
+                            {trip.totalCost && (
+                              <div className="flex-shrink-0 text-right mr-4">
+                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Costo</p>
+                                <p className="text-sm font-semibold text-green-600">
+                                  $ {trip.totalCost.replace(".", ",")}
+                                </p>
+                              </div>
+                            )}
                           </div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="h-2 w-2 rounded-full bg-red-500"></div>
-                            <p className="text-sm font-medium text-slate-900 truncate">{trip.destinationAddress}</p>
+                          <div className="flex items-start justify-between gap-4 mb-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Destino</p>
+                              <p className="text-sm font-medium text-slate-900 truncate">{trip.destinationAddress}</p>
+                            </div>
+                            <div className="flex-shrink-0 text-right mr-4">
+                              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Tipo</p>
+                              <p className="text-sm font-medium text-slate-900">
+                                {trip.isRoundTrip ? "Ida y Vuelta" : "Solo Ida"}
+                              </p>
+                            </div>
                           </div>
                           <p className="text-xs text-slate-500 mt-2">
                             {format(new Date(trip.savedAt), "PPP 'a las' HH:mm", { locale: es })}
@@ -659,7 +755,7 @@ export default function Home() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-slate-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="h-8 w-8 text-slate-400 hover:bg-slate-200 hover:text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={(e) => handleDeleteTrip(trip.id, e)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -1088,7 +1184,7 @@ export default function Home() {
                     className="py-2.5 px-4 border-slate-300 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-all shadow-md hover:shadow-lg"
                     title="Guardar viaje"
                   >
-                    <Bookmark className="h-5 w-5 text-slate-600" />
+                    <Bookmark className={`h-5 w-5 ${isCurrentTripSaved() ? "text-slate-900 fill-slate-900" : "text-slate-600"}`} />
                   </Button>
                 </div>
 
