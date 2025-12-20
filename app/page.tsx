@@ -899,9 +899,9 @@ function HomeContent() {
                     <div
                       key={trip.id}
                       onClick={() => handleLoadTrip(trip)}
-                      className="group relative bg-white border border-slate-200 rounded-lg p-3.5 hover:border-slate-300 hover:bg-slate-50/50 hover:shadow-lg transition-all duration-200 cursor-pointer overflow-hidden shadow-sm"
+                      className="group relative bg-white border border-slate-200 rounded-lg p-4 md:p-3.5 hover:border-slate-300 hover:bg-slate-50/50 hover:shadow-lg transition-all duration-200 cursor-pointer overflow-hidden shadow-sm"
                     >
-                      <div className="relative flex items-start justify-between gap-3">
+                      <div className="relative flex items-start justify-between gap-3 md:gap-3">
                         <div className="flex-1 min-w-0 space-y-2">
                           {/* Origin */}
                           <div className="space-y-0.5">
@@ -956,11 +956,11 @@ function HomeContent() {
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
+                        <div className="flex flex-col items-center gap-2 flex-shrink-0">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-slate-400 hover:bg-red-50 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all duration-200"
+                            className="h-9 w-9 md:h-8 md:w-8 text-slate-400 hover:bg-red-50 hover:text-red-600 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200"
                             onClick={(e) => handleDeleteTrip(trip.id, e)}
                             title="Eliminar viaje"
                           >
@@ -969,7 +969,7 @@ function HomeContent() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-green-600 hover:bg-green-50 hover:text-green-700 opacity-0 group-hover:opacity-100 transition-all duration-200"
+                            className="h-9 w-9 md:h-8 md:w-8 text-green-600 hover:bg-green-50 hover:text-green-700 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200"
                             onClick={(e) => handleShareTripWhatsApp(trip, e)}
                             title="Compartir por WhatsApp"
                           >
@@ -978,7 +978,7 @@ function HomeContent() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-slate-400 hover:bg-slate-100 hover:text-slate-600 opacity-0 group-hover:opacity-100 transition-all duration-200"
+                            className="h-9 w-9 md:h-8 md:w-8 text-slate-400 hover:bg-slate-100 hover:text-slate-600 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200"
                             onClick={(e) => handleCopyTripMessage(trip, e)}
                             title="Copiar mensaje"
                           >
