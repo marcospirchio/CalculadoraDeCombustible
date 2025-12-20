@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense, useRef } from "react"
+import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -15,7 +16,7 @@ import {
 } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { Loader2, ChevronDown, CalendarIcon, Clock, ArrowUpDown, Bookmark, Menu, Trash2 } from "lucide-react"
+import { Loader2, ChevronDown, CalendarIcon, Clock, ArrowUpDown, Bookmark, Menu, Trash2, MessageCircle, Copy } from "lucide-react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
@@ -28,7 +29,7 @@ const SORTED_VEHICLES = [...vehicles].sort((a, b) => a.brand.localeCompare(b.bra
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ""
 
-export default function Home() {
+function HomeContent() {
   const [selectedBrand, setSelectedBrand] = useState("")
   const [selectedModel, setSelectedModel] = useState("")
   const [customConsumption, setCustomConsumption] = useState("")
@@ -75,6 +76,8 @@ export default function Home() {
     savedAt: string
   }>>([])
   const [sheetOpen, setSheetOpen] = useState(false)
+  const hasProcessedUrlParams = useRef(false)
+  const shouldAutoCalculate = useRef(false)
 
   useEffect(() => {
     const script = document.createElement("script")
@@ -101,6 +104,104 @@ export default function Home() {
       }
     }
   }, [])
+
+  // Read URL parameters to restore shared trip
+  const searchParams = useSearchParams()
+  
+  useEffect(() => {
+    // Only process URL params once
+    if (hasProcessedUrlParams.current) return
+    
+    const originParam = searchParams.get("origin")
+    const destParam = searchParams.get("dest")
+    const originAddr = searchParams.get("originAddr")
+    const destAddr = searchParams.get("destAddr")
+    const brandParam = searchParams.get("brand")
+    const modelParam = searchParams.get("model")
+    const customConsumptionParam = searchParams.get("customConsumption")
+    const fuelPriceParam = searchParams.get("fuelPrice")
+    const consumptionParam = searchParams.get("consumption")
+    const passengersParam = searchParams.get("passengers")
+    const isRoundTripParam = searchParams.get("isRoundTrip")
+
+    // Check if we have the minimum required parameters
+    if (originParam && destParam) {
+      hasProcessedUrlParams.current = true
+      try {
+        // Parse coordinates
+        const [originLat, originLng] = originParam.split(",").map(Number.parseFloat)
+        const [destLat, destLng] = destParam.split(",").map(Number.parseFloat)
+
+        if (!isNaN(originLat) && !isNaN(originLng) && !isNaN(destLat) && !isNaN(destLng)) {
+          // Set origin and destination coordinates
+          setOrigin({ lat: originLat, lng: originLng })
+          setDestination({ lat: destLat, lng: destLng })
+
+          // Set addresses if available
+          if (originAddr) setOriginAddress(originAddr)
+          if (destAddr) setDestinationAddress(destAddr)
+
+          // Set brand and model
+          if (brandParam) setSelectedBrand(brandParam)
+          if (modelParam) setSelectedModel(modelParam)
+
+          // Set custom consumption if available, otherwise use the consumption from URL
+          if (customConsumptionParam) {
+            setCustomConsumption(customConsumptionParam)
+          } else if (consumptionParam) {
+            // Convert consumption from URL (with dot) to format with comma for display
+            const consumptionValue = consumptionParam.replace(".", ",")
+            setCustomConsumption(consumptionValue)
+          }
+
+          // Set fuel price
+          if (fuelPriceParam) {
+            setFuelPrice(fuelPriceParam)
+          }
+
+          // Set passengers
+          if (passengersParam) {
+            const passengersNum = Number.parseInt(passengersParam, 10)
+            if (!isNaN(passengersNum) && passengersNum >= 1) {
+              setPassengers(passengersNum)
+              setPassengersInput(passengersParam)
+            }
+          }
+
+          // Set round trip
+          if (isRoundTripParam === "true") {
+            setIsRoundTrip(true)
+          }
+
+          // Mark that we should auto-calculate after states are updated
+          shouldAutoCalculate.current = true
+
+          // Clean URL after loading
+          if (typeof window !== "undefined") {
+            window.history.replaceState({}, "", window.location.pathname)
+          }
+        }
+      } catch (error) {
+        console.error("Error parsing URL parameters:", error)
+      }
+    }
+  }, [searchParams])
+
+  // Auto-calculate when URL params are loaded and Google Maps is ready
+  useEffect(() => {
+    if (shouldAutoCalculate.current && googleScriptReady && origin && destination) {
+      // Reset the flag
+      shouldAutoCalculate.current = false
+      
+      // Wait a bit for all state updates to be applied, then calculate
+      const timer = setTimeout(() => {
+        handleCalculate()
+      }, 500)
+      
+      return () => clearTimeout(timer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [googleScriptReady, origin, destination, selectedBrand, selectedModel, customConsumption, fuelPrice])
 
   const handleCalculate = async (customOrigin?: { lat: number; lng: number } | null, customDestination?: { lat: number; lng: number } | null) => {
     setError("")
@@ -647,6 +748,79 @@ export default function Home() {
     toast.success("Viaje eliminado")
   }
 
+  // Generate shareable link from saved trip
+  const generateShareLinkFromTrip = (trip: typeof savedTrips[0]): string => {
+    if (!trip.origin || !trip.destination) return "https://calculadora-de-combustible.vercel.app/"
+
+    const params = new URLSearchParams()
+    params.set("origin", `${trip.origin.lat},${trip.origin.lng}`)
+    params.set("dest", `${trip.destination.lat},${trip.destination.lng}`)
+    if (trip.originAddress) params.set("originAddr", trip.originAddress)
+    if (trip.destinationAddress) params.set("destAddr", trip.destinationAddress)
+    if (trip.selectedBrand) params.set("brand", trip.selectedBrand)
+    if (trip.selectedModel) params.set("model", trip.selectedModel)
+    if (trip.customConsumption) params.set("customConsumption", trip.customConsumption)
+    if (trip.fuelPrice) params.set("fuelPrice", trip.fuelPrice)
+    if (trip.totalCost) {
+      // Try to extract distance and duration from totalCost if available
+      // For now, we'll need to estimate or use defaults
+      params.set("totalCost", trip.totalCost)
+    }
+    params.set("passengers", trip.passengers.toString())
+    params.set("isRoundTrip", trip.isRoundTrip ? "true" : "false")
+    
+    // If we have consumption data, include it
+    if (trip.customConsumption) {
+      const consumptionValue = trip.customConsumption.replace(",", ".")
+      params.set("consumption", consumptionValue)
+    } else if (trip.selectedModel && trip.selectedBrand) {
+      // Get consumption from model
+      const brand = SORTED_VEHICLES.find((v) => v.brand === trip.selectedBrand)
+      if (brand) {
+        const model = brand.models.find((m) => m.name === trip.selectedModel)
+        if (model?.avgConsumptionLPer100km) {
+          params.set("consumption", model.avgConsumptionLPer100km.toString())
+        }
+      }
+    }
+
+    return `https://calculadora-de-combustible.vercel.app/?${params.toString()}`
+  }
+
+  // Generate share message from saved trip
+  const generateShareMessageFromTrip = (trip: typeof savedTrips[0]): string => {
+    const link = generateShareLinkFromTrip(trip)
+    const route = trip.originAddress && trip.destinationAddress 
+      ? `${trip.originAddress} → ${trip.destinationAddress}`
+      : "mi viaje"
+    
+    const costText = trip.totalCost 
+      ? `💰 Costo total: $${trip.totalCost.replace(".", ",")}\n`
+      : ""
+    
+    return `🚗 ¡Mira este viaje calculado en RuteAR!\n\n📍 Ruta: ${route}\n${costText}${link}`
+  }
+
+  // Share saved trip via WhatsApp
+  const handleShareTripWhatsApp = (trip: typeof savedTrips[0], e: React.MouseEvent) => {
+    e.stopPropagation()
+    const message = generateShareMessageFromTrip(trip)
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
+    window.open(whatsappUrl, "_blank")
+  }
+
+  // Copy saved trip message to clipboard
+  const handleCopyTripMessage = async (trip: typeof savedTrips[0], e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      const message = generateShareMessageFromTrip(trip)
+      await navigator.clipboard.writeText(message)
+      toast.success("Mensaje copiado al portapapeles")
+    } catch (error) {
+      toast.error("Error al copiar el mensaje")
+    }
+  }
+
   // Recalculate results when round trip toggle or telepase changes
   useEffect(() => {
     if (baseRouteData) {
@@ -752,14 +926,34 @@ export default function Home() {
                             {format(new Date(trip.savedAt), "PPP 'a las' HH:mm", { locale: es })}
                           </p>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-slate-400 hover:bg-slate-200 hover:text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={(e) => handleDeleteTrip(trip.id, e)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex flex-col items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-slate-400 hover:bg-slate-200 hover:text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => handleDeleteTrip(trip.id, e)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-green-600 hover:bg-green-100 hover:text-green-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => handleShareTripWhatsApp(trip, e)}
+                            title="Compartir por WhatsApp"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-slate-400 hover:bg-slate-200 hover:text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => handleCopyTripMessage(trip, e)}
+                            title="Copiar mensaje"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))
@@ -1203,6 +1397,12 @@ export default function Home() {
                 passengers={passengers}
                 origin={origin}
                 destination={destination}
+                originAddress={originAddress}
+                destinationAddress={destinationAddress}
+                selectedBrand={selectedBrand}
+                selectedModel={selectedModel}
+                customConsumption={customConsumption}
+                fuelPrice={fuelPrice}
                 polyline={routePolyline}
                 googleScriptReady={googleScriptReady}
               />
@@ -1211,5 +1411,17 @@ export default function Home() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-200 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   )
 }

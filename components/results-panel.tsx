@@ -2,7 +2,9 @@
 
 import { useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { TrendingUp, Clock, Droplet, DollarSign, AlertCircle, Users } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { TrendingUp, Clock, Droplet, DollarSign, AlertCircle, Users, MessageCircle, Copy } from "lucide-react"
+import { toast } from "sonner"
 
 declare global {
   interface Window {
@@ -122,6 +124,12 @@ interface ResultsPanelProps {
   passengers: number
   origin: { lat: number; lng: number } | null
   destination: { lat: number; lng: number } | null
+  originAddress?: string
+  destinationAddress?: string
+  selectedBrand?: string
+  selectedModel?: string
+  customConsumption?: string
+  fuelPrice?: string
   polyline: string | null
   googleScriptReady: boolean
 }
@@ -131,6 +139,12 @@ export default function ResultsPanel({
   passengers,
   origin,
   destination,
+  originAddress = "",
+  destinationAddress = "",
+  selectedBrand = "",
+  selectedModel = "",
+  customConsumption = "",
+  fuelPrice = "",
   polyline,
   googleScriptReady,
 }: ResultsPanelProps) {
@@ -153,6 +167,58 @@ export default function ResultsPanel({
     // Replace the decimal point with comma - ensure it's a string
     const result = String(formatted).replace(/\./g, ",")
     return result
+  }
+
+  // Generate shareable link with trip data
+  const generateShareLink = (): string => {
+    if (!origin || !destination) return "https://calculadora-de-combustible.vercel.app/"
+
+    const params = new URLSearchParams()
+    params.set("origin", `${origin.lat},${origin.lng}`)
+    params.set("dest", `${destination.lat},${destination.lng}`)
+    if (originAddress) params.set("originAddr", originAddress)
+    if (destinationAddress) params.set("destAddr", destinationAddress)
+    params.set("distance", results.distance)
+    params.set("duration", results.duration)
+    params.set("totalCost", results.totalCost)
+    params.set("passengers", passengers.toString())
+    params.set("isRoundTrip", "false") // You can add this prop later if needed
+    if (selectedBrand) params.set("brand", selectedBrand)
+    if (selectedModel) params.set("model", selectedModel)
+    if (customConsumption) params.set("customConsumption", customConsumption)
+    if (fuelPrice) params.set("fuelPrice", fuelPrice)
+    // Include the actual consumption used (from results)
+    params.set("consumption", results.consumption.toString())
+
+    return `https://calculadora-de-combustible.vercel.app/?${params.toString()}`
+  }
+
+  // Generate share message
+  const generateShareMessage = (): string => {
+    const link = generateShareLink()
+    const route = originAddress && destinationAddress 
+      ? `${originAddress} → ${destinationAddress}`
+      : "mi viaje"
+    
+    return `🚗 ¡Mira este viaje calculado en RuteAR!\n\n📍 Ruta: ${route}\n💰 Costo total: $${results.totalCost.replace(".", ",")}\n📏 Distancia: ${results.distance} km\n⏱️ Duración: ${results.duration}\n\n${link}`
+  }
+
+  // Share via WhatsApp
+  const handleShareWhatsApp = () => {
+    const message = generateShareMessage()
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
+    window.open(whatsappUrl, "_blank")
+  }
+
+  // Copy message to clipboard
+  const handleCopyMessage = async () => {
+    try {
+      const message = generateShareMessage()
+      await navigator.clipboard.writeText(message)
+      toast.success("Mensaje copiado al portapapeles")
+    } catch (error) {
+      toast.error("Error al copiar el mensaje")
+    }
   }
 
   useEffect(() => {
@@ -419,6 +485,26 @@ export default function ResultsPanel({
           </div>
         </CardContent>
       </Card>
+
+      {/* Share Buttons */}
+      <div className="flex gap-2 mt-4">
+        <Button
+          onClick={handleShareWhatsApp}
+          className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-md transition-all shadow-md hover:shadow-lg"
+        >
+          <MessageCircle className="mr-2 h-4 w-4" />
+          Compartir por WhatsApp
+        </Button>
+        <Button
+          onClick={handleCopyMessage}
+          variant="outline"
+          className="flex-1 py-2.5 border-slate-300 hover:bg-slate-50 rounded-md transition-all shadow-md hover:shadow-lg"
+          title="Copiar mensaje"
+        >
+          <Copy className="mr-2 h-4 w-4" />
+          Copiar Mensaje
+        </Button>
+      </div>
     </div>
   )
 }
