@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { Loader2, ChevronDown, CalendarIcon, Clock, ArrowUpDown, Bookmark, Menu, Trash2, MessageCircle, Copy } from "lucide-react"
+import { Loader2, ChevronDown, CalendarIcon, Clock, ArrowUpDown, Bookmark, Menu, Trash2, MessageCircle, Copy, Users, RotateCcw, ArrowRight } from "lucide-react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
@@ -874,71 +874,102 @@ function HomeContent() {
                 <span className="sr-only">Mis Viajes</span>
               </Button>
             </SheetTrigger>
-            <SheetContent>
-              <SheetHeader>
-                <SheetTitle>Mis Viajes Guardados</SheetTitle>
-                <SheetDescription>
-                  Selecciona un viaje para cargar sus datos o elimínalo si ya no lo necesitas.
+            <SheetContent className="sm:max-w-md bg-slate-50">
+              <SheetHeader className="pb-4 border-b border-slate-200/80">
+                <SheetTitle className="text-xl font-bold text-slate-900">
+                  Mis Viajes Guardados
+                </SheetTitle>
+                <SheetDescription className="text-sm text-slate-600 mt-1.5">
+                  Selecciona un viaje para cargar sus datos o compártelo con otros.
                 </SheetDescription>
               </SheetHeader>
-              <div className="mt-6 space-y-3 max-h-[calc(100vh-150px)] overflow-y-auto">
+              <div className="mt-4 space-y-2.5 max-h-[calc(100vh-180px)] overflow-y-auto px-1">
                 {savedTrips.length === 0 ? (
-                  <div className="text-center py-8 text-slate-500">
-                    <p>No tienes viajes guardados aún.</p>
-                    <p className="text-sm mt-2">Guarda un viaje usando el botón de marcador.</p>
+                  <div className="text-center py-12">
+                    <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-white border border-slate-200 mb-4 shadow-sm">
+                      <Bookmark className="h-7 w-7 text-slate-400" />
+                    </div>
+                    <p className="text-slate-700 font-semibold mb-1.5">No tienes viajes guardados aún</p>
+                    <p className="text-sm text-slate-500 max-w-xs mx-auto">
+                      Guarda un viaje usando el botón de marcador
+                    </p>
                   </div>
                 ) : (
                   savedTrips.map((trip) => (
                     <div
                       key={trip.id}
                       onClick={() => handleLoadTrip(trip)}
-                      className="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors relative group"
+                      className="group relative bg-white border border-slate-200 rounded-lg p-3.5 hover:border-slate-300 hover:bg-slate-50/50 hover:shadow-lg transition-all duration-200 cursor-pointer overflow-hidden shadow-sm"
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0 pr-5">
-                          <div className="flex items-start justify-between gap-4 mb-3">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Origen</p>
-                              <p className="text-sm font-medium text-slate-900 truncate">{trip.originAddress}</p>
-                            </div>
+                      <div className="relative flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0 space-y-2">
+                          {/* Origin */}
+                          <div className="space-y-0.5">
+                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Origen</p>
+                            <p className="text-sm font-semibold text-slate-900 truncate">{trip.originAddress}</p>
+                          </div>
+
+                          {/* Destination */}
+                          <div className="space-y-0.5">
+                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Destino</p>
+                            <p className="text-sm font-semibold text-slate-900 truncate">{trip.destinationAddress}</p>
+                          </div>
+
+                          {/* Cost and Type Row */}
+                          <div className="flex items-center gap-2 pt-1.5 border-t border-slate-100">
                             {trip.totalCost && (
-                              <div className="flex-shrink-0 text-right mr-4">
-                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Costo</p>
-                                <p className="text-sm font-semibold text-green-600">
-                                  $ {trip.totalCost.replace(".", ",")}
-                                </p>
+                              <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-50 rounded-full border border-green-200">
+                                <span className="text-xs font-bold text-green-700">
+                                  ${trip.totalCost.replace(".", ",")}
+                                </span>
                               </div>
                             )}
-                          </div>
-                          <div className="flex items-start justify-between gap-4 mb-3">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Destino</p>
-                              <p className="text-sm font-medium text-slate-900 truncate">{trip.destinationAddress}</p>
+                            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${
+                              trip.isRoundTrip 
+                                ? "bg-amber-50 border-amber-200" 
+                                : "bg-slate-50 border-slate-200"
+                            }`}>
+                              {trip.isRoundTrip ? (
+                                <>
+                                  <RotateCcw className="h-3 w-3 text-amber-600" />
+                                  <span className="text-xs font-medium text-amber-700">Ida y Vuelta</span>
+                                </>
+                              ) : (
+                                <>
+                                  <ArrowRight className="h-3 w-3 text-slate-600" />
+                                  <span className="text-xs font-medium text-slate-700">Solo Ida</span>
+                                </>
+                              )}
                             </div>
-                            <div className="flex-shrink-0 text-right mr-4">
-                              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Tipo</p>
-                              <p className="text-sm font-medium text-slate-900">
-                                {trip.isRoundTrip ? "Ida y Vuelta" : "Solo Ida"}
-                              </p>
+                            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-purple-50 rounded-full border border-purple-200">
+                              <Users className="h-3 w-3 text-purple-600" />
+                              <span className="text-xs font-medium text-purple-700">
+                                {trip.passengers} {trip.passengers === 1 ? "persona" : "personas"}
+                              </span>
                             </div>
                           </div>
-                          <p className="text-xs text-slate-500 mt-2">
+
+                          {/* Date */}
+                          <p className="text-xs text-slate-400 pt-0.5">
                             {format(new Date(trip.savedAt), "PPP 'a las' HH:mm", { locale: es })}
                           </p>
                         </div>
-                        <div className="flex flex-col items-center gap-2">
+
+                        {/* Action Buttons */}
+                        <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-slate-400 hover:bg-slate-200 hover:text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="h-8 w-8 text-slate-400 hover:bg-red-50 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all duration-200"
                             onClick={(e) => handleDeleteTrip(trip.id, e)}
+                            title="Eliminar viaje"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-green-600 hover:bg-green-100 hover:text-green-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="h-8 w-8 text-green-600 hover:bg-green-50 hover:text-green-700 opacity-0 group-hover:opacity-100 transition-all duration-200"
                             onClick={(e) => handleShareTripWhatsApp(trip, e)}
                             title="Compartir por WhatsApp"
                           >
@@ -947,7 +978,7 @@ function HomeContent() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-slate-400 hover:bg-slate-200 hover:text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="h-8 w-8 text-slate-400 hover:bg-slate-100 hover:text-slate-600 opacity-0 group-hover:opacity-100 transition-all duration-200"
                             onClick={(e) => handleCopyTripMessage(trip, e)}
                             title="Copiar mensaje"
                           >
