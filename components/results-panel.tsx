@@ -418,8 +418,8 @@ export default function ResultsPanel({
           </CardContent>
         </Card>
 
-        {/* Total - spans 1 column on desktop */}
-        <Card className="bg-gradient-to-br from-green-100 to-green-200/50 border-2 border-green-400 shadow-md hover:shadow-lg transition-shadow col-span-2 md:col-span-3 lg:col-span-1">
+        {/* Total - spans 1 column on desktop, rectangular on smaller screens */}
+        <Card className="bg-gradient-to-br from-green-100 to-green-200/50 border-2 border-green-400 shadow-md hover:shadow-lg transition-shadow col-span-2 md:col-span-2 lg:col-span-1">
           <CardContent className="p-3">
             <div className="flex flex-col items-center text-center space-y-1.5">
               <div className="p-1.5 bg-green-500/20 rounded-full">
