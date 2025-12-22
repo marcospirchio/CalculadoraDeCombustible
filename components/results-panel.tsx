@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { TrendingUp, Clock, Droplet, DollarSign, AlertCircle, Users, MessageCircle, Copy } from "lucide-react"
+import { TrendingUp, Clock, Droplet, DollarSign, AlertCircle, Users, Copy } from "lucide-react"
 import { toast } from "sonner"
 
 declare global {
@@ -196,11 +196,22 @@ export default function ResultsPanel({
   // Generate share message
   const generateShareMessage = (): string => {
     const link = generateShareLink()
-    const route = originAddress && destinationAddress 
-      ? `${originAddress} → ${destinationAddress}`
-      : "mi viaje"
-    
-    return `🚗 ¡Mira este viaje calculado en RuteAR!\n\n📍 Ruta: ${route}\n💰 Costo total: $${results.totalCost.replace(".", ",")}\n📏 Distancia: ${results.distance} km\n⏱️ Duración: ${results.duration}\n\n${link}`
+    const route =
+      originAddress && destinationAddress ? `${originAddress} → ${destinationAddress}` : "mi viaje"
+
+    const totalFormatted = results.totalCost.replace(".", ",")
+
+    let costLine: string
+    if (passengers > 1) {
+      // Calculamos costo por persona desde el total para asegurar coherencia
+      const perPerson = (Number.parseFloat(results.totalCost) / passengers).toFixed(2)
+      const perPersonFormatted = perPerson.replace(".", ",")
+      costLine = `💰 Costo por persona: $${perPersonFormatted} - (${passengers} pasajeros) – Total: $${totalFormatted}`
+    } else {
+      costLine = `💰 Costo total: $${totalFormatted}`
+    }
+
+    return `🚗 ¡Mira este viaje calculado en RuteAR!\n\n📍 Ruta: ${route}\n${costLine}\n📏 Distancia: ${results.distance} km\n⏱️ Duración: ${results.duration}\n\n${link}`
   }
 
   // Share via WhatsApp
@@ -214,7 +225,25 @@ export default function ResultsPanel({
   const handleCopyMessage = async () => {
     try {
       const message = generateShareMessage()
-      await navigator.clipboard.writeText(message)
+      // Use Clipboard API when available and en contexto seguro (HTTPS o localhost)
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(message)
+      } else {
+        // Fallback para contextos no seguros (por ejemplo, IP local en HTTP)
+        const textArea = document.createElement("textarea")
+        textArea.value = message
+        textArea.style.position = "fixed"
+        textArea.style.left = "-9999px"
+        textArea.style.top = "0"
+        document.body.appendChild(textArea)
+        textArea.focus()
+        textArea.select()
+        try {
+          document.execCommand("copy")
+        } finally {
+          document.body.removeChild(textArea)
+        }
+      }
       toast.success("Mensaje copiado al portapapeles")
     } catch (error) {
       toast.error("Error al copiar el mensaje")
@@ -464,7 +493,7 @@ export default function ResultsPanel({
               <span className="font-semibold text-sm text-slate-800">$ {results.fuelCost}</span>
             </div>
 
-            {Number.parseFloat(results.tollCost) > 0 && (
+            {results.tollCost && (
               <div className="flex items-center justify-between p-2 bg-amber-50 rounded-lg border border-amber-200">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-amber-900">Costo de Peajes</span>
@@ -487,18 +516,24 @@ export default function ResultsPanel({
       </Card>
 
       {/* Share Buttons */}
-      <div className="flex gap-2 mt-4">
+      <div className="flex gap-2 mt-4 pb-16 md:pb-0">
         <Button
           onClick={handleShareWhatsApp}
           className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-md transition-all shadow-md hover:shadow-lg"
         >
-          <MessageCircle className="mr-2 h-4 w-4" />
-          Compartir por WhatsApp
+          <span className="flex items-center justify-center">
+            <img
+              src="https://img.icons8.com/ios/50/FFFFFF/whatsapp--v1.png"
+              alt="Compartir por WhatsApp"
+              className="w-5 h-5 mr-2"
+            />
+            Compartir por WhatsApp
+          </span>
         </Button>
         <Button
           onClick={handleCopyMessage}
           variant="outline"
-          className="flex-1 py-2.5 border-slate-300 hover:bg-slate-50 rounded-md transition-all shadow-md hover:shadow-lg"
+          className="flex-1 py-2.5 px-3 border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-900 rounded-md transition-all shadow-md hover:shadow-lg"
           title="Copiar mensaje"
         >
           <Copy className="mr-2 h-4 w-4" />

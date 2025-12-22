@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { Loader2, ChevronDown, CalendarIcon, Clock, ArrowUpDown, Bookmark, Menu, Trash2, MessageCircle, Copy, Users, RotateCcw, ArrowRight } from "lucide-react"
+import { Loader2, ChevronDown, CalendarIcon, Clock, ArrowUpDown, Bookmark, Menu, Trash2, Copy, Users, RotateCcw, ArrowRight } from "lucide-react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
@@ -41,6 +41,7 @@ function HomeContent() {
   const [results, setResults] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [destinationError, setDestinationError] = useState("")
   const [googleScriptReady, setGoogleScriptReady] = useState(false)
   const [showHowItWorks, setShowHowItWorks] = useState(false)
   const [isRoundTrip, setIsRoundTrip] = useState(false)
@@ -203,6 +204,23 @@ function HomeContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [googleScriptReady, origin, destination, selectedBrand, selectedModel, customConsumption, fuelPrice])
 
+  // Validate that origin and destination are not the same (live validation for UI)
+  useEffect(() => {
+    if (origin && destination) {
+      const sameLocation =
+        Math.abs(origin.lat - destination.lat) < 0.0001 &&
+        Math.abs(origin.lng - destination.lng) < 0.0001
+
+      if (sameLocation) {
+        setDestinationError("El destino no puede ser igual al origen")
+      } else {
+        setDestinationError("")
+      }
+    } else {
+      setDestinationError("")
+    }
+  }, [origin, destination])
+
   const handleCalculate = async (customOrigin?: { lat: number; lng: number } | null, customDestination?: { lat: number; lng: number } | null) => {
     setError("")
     setLoading(true)
@@ -213,6 +231,17 @@ function HomeContent() {
 
       if (!originToUse || !destinationToUse) {
         setError("Por favor selecciona origen y destino")
+        setLoading(false)
+        return
+      }
+
+      // Prevent calculating when origin and destination are the same
+      const sameLocation =
+        Math.abs(originToUse.lat - destinationToUse.lat) < 0.0001 &&
+        Math.abs(originToUse.lng - destinationToUse.lng) < 0.0001
+
+      if (sameLocation) {
+        setError("El origen y el destino no pueden ser iguales")
         setLoading(false)
         return
       }
@@ -479,6 +508,30 @@ function HomeContent() {
     return foundTrip?.id || null
   }
 
+  // Reset all calculator parameters
+  const handleReset = () => {
+    setSelectedBrand("")
+    setSelectedModel("")
+    setCustomConsumption("")
+    setFuelPrice("1700")
+    setOrigin(null)
+    setDestination(null)
+    setOriginAddress("")
+    setDestinationAddress("")
+    setResults(null)
+    setError("")
+    setDestinationError("")
+    setIsRoundTrip(false)
+    setHasTelepase(false)
+    setPassengers(1)
+    setPassengersInput("1")
+    setRoutePolyline(null)
+    setBaseRouteData(null)
+    setTimeType("now")
+    setSelectedDateTime(undefined)
+    toast.success("Calculadora restablecida")
+  }
+
   // Save trip to localStorage (toggle: save if not saved, unsave if already saved)
   const handleSaveTrip = () => {
     if (!origin || !destination) {
@@ -527,6 +580,29 @@ function HomeContent() {
     setSavedTrips(updatedTrips)
     localStorage.setItem("rutear_history", JSON.stringify(updatedTrips))
     toast.success("Viaje guardado")
+  }
+
+  // Reset all calculator fields to their initial state
+  const handleResetCalculator = () => {
+    setSelectedBrand("")
+    setSelectedModel("")
+    setCustomConsumption("")
+    setFuelPrice("1700")
+    setOrigin(null)
+    setDestination(null)
+    setOriginAddress("")
+    setDestinationAddress("")
+    setResults(null)
+    setBaseRouteData(null)
+    setRoutePolyline(null)
+    setIsRoundTrip(false)
+    setHasTelepase(false)
+    setPassengers(1)
+    setPassengersInput("1")
+    setTimeType("now")
+    setSelectedDateTime(undefined)
+    setError("")
+    setDestinationError("")
   }
 
   // Load trip from saved trips
@@ -794,9 +870,17 @@ function HomeContent() {
       ? `${trip.originAddress} → ${trip.destinationAddress}`
       : "mi viaje"
     
-    const costText = trip.totalCost 
-      ? `💰 Costo total: $${trip.totalCost.replace(".", ",")}\n`
-      : ""
+    let costText = ""
+    if (trip.totalCost) {
+      const totalFormatted = trip.totalCost.replace(".", ",")
+      if (trip.passengers > 1) {
+        const perPerson = (Number.parseFloat(trip.totalCost) / trip.passengers).toFixed(2)
+        const perPersonFormatted = perPerson.replace(".", ",")
+        costText = `💰 Costo por persona: $${perPersonFormatted} - (${trip.passengers} pasajeros) – Total: $${totalFormatted}\n`
+      } else {
+        costText = `💰 Costo total: $${totalFormatted}\n`
+      }
+    }
     
     return `🚗 ¡Mira este viaje calculado en RuteAR!\n\n📍 Ruta: ${route}\n${costText}${link}`
   }
@@ -814,7 +898,25 @@ function HomeContent() {
     e.stopPropagation()
     try {
       const message = generateShareMessageFromTrip(trip)
-      await navigator.clipboard.writeText(message)
+      // Usar Clipboard API cuando esté disponible en contexto seguro
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(message)
+      } else {
+        // Fallback para contextos no seguros (por ejemplo, IP local en HTTP)
+        const textArea = document.createElement("textarea")
+        textArea.value = message
+        textArea.style.position = "fixed"
+        textArea.style.left = "-9999px"
+        textArea.style.top = "0"
+        document.body.appendChild(textArea)
+        textArea.focus()
+        textArea.select()
+        try {
+          document.execCommand("copy")
+        } finally {
+          document.body.removeChild(textArea)
+        }
+      }
       toast.success("Mensaje copiado al portapapeles")
     } catch (error) {
       toast.error("Error al copiar el mensaje")
@@ -973,7 +1075,11 @@ function HomeContent() {
                             onClick={(e) => handleShareTripWhatsApp(trip, e)}
                             title="Compartir por WhatsApp"
                           >
-                            <MessageCircle className="h-4 w-4" />
+                            <img
+                              src="https://img.icons8.com/ios/50/22c55e/whatsapp--v1.png"
+                              alt="WhatsApp"
+                              className="h-5 w-5"
+                            />
                           </Button>
                           <Button
                             variant="ghost"
@@ -1139,6 +1245,9 @@ function HomeContent() {
                         resetKey={destinationAddress}
                         apiKey={API_KEY}
                       />
+                      {destinationError && (
+                        <p className="text-xs text-red-600 mt-1">{destinationError}</p>
+                      )}
                     </div>
                   </div>
                   
@@ -1410,6 +1519,14 @@ function HomeContent() {
                     title="Guardar viaje"
                   >
                     <Bookmark className={`h-5 w-5 ${isCurrentTripSaved() ? "text-slate-900 fill-slate-900" : "text-slate-600"}`} />
+                  </Button>
+                  <Button
+                    onClick={handleReset}
+                    variant="outline"
+                    className="py-2.5 px-4 border-slate-300 hover:bg-slate-50 rounded-md transition-all shadow-md hover:shadow-lg"
+                    title="Restablecer calculadora"
+                  >
+                    <RotateCcw className="h-5 w-5 text-slate-600" />
                   </Button>
                 </div>
 
