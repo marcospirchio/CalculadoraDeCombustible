@@ -582,7 +582,7 @@ function HomeContent() {
     const updatedTrips = [trip, ...savedTrips]
     setSavedTrips(updatedTrips)
     localStorage.setItem("rutear_history", JSON.stringify(updatedTrips))
-    toast.success("Viaje guardado")
+    toast.success("Viaje guardado en Mis Viajes")
   }
 
   // Reset all calculator fields to their initial state
@@ -1639,6 +1639,47 @@ function HomeContent() {
           </div>
         </div>
       </main>
+
+      {/* SEO Content - Semántico pero discreto */}
+      <footer className="bg-slate-100 py-12 px-4 mt-16">
+        <div className="max-w-4xl mx-auto space-y-8 text-slate-600">
+          <section>
+            <h1 className="text-2xl font-bold text-slate-800 mb-4">
+              Calculadora de Costos de Viaje y Peajes en Argentina
+            </h1>
+            <p className="text-sm leading-relaxed">
+              RuteAR es la herramienta más completa para calcular el costo real de tus viajes en auto por Argentina. 
+              Incluye cálculo preciso de consumo de combustible según el modelo de tu vehículo, tarifas actualizadas de peajes 
+              y la posibilidad de dividir gastos entre pasajeros.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-slate-800 mb-3">
+              ¿Cómo calcular el consumo de nafta de mi auto?
+            </h2>
+            <p className="text-sm leading-relaxed">
+              El consumo de combustible varía según el modelo y marca de tu vehículo. En RuteAR encontrarás una base de datos 
+              actualizada con el consumo promedio de las principales marcas como Fiat, Volkswagen, Toyota, Ford, Chevrolet y más. 
+              Cada modelo tiene su consumo específico medido en litros cada 100 kilómetros. Si tu auto no está en la lista, 
+              puedes ingresar el consumo manualmente. El cálculo considera la distancia total del viaje, incluyendo ida y vuelta 
+              si lo configurás, y te muestra el costo exacto según el precio actual de la nafta.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-slate-800 mb-3">
+              Precios de Peajes y Telepase 2025
+            </h2>
+            <p className="text-sm leading-relaxed">
+              Las principales rutas de Argentina como la Panamericana, Ruta 2, Ruta 9, Autopista del Oeste y otras rutas nacionales 
+              tienen peajes con tarifas actualizadas para 2025. Con RuteAR podés calcular el costo total de peajes en tu ruta. 
+              Además, si tenés Telepase configurado, la calculadora aplica automáticamente el descuento del 30% en todos los peajes 
+              que aceptan este sistema de pago electrónico, ayudándote a ahorrar en cada viaje.
+            </p>
+          </section>
+        </div>
+      </footer>
     </div>
   )
 }
