@@ -1121,15 +1121,15 @@ function HomeContent() {
       <main className="max-w-7xl mx-auto px-2 sm:px-3 lg:px-4 py-6">
         <div className="mb-4">
           <div className="flex gap-2 items-stretch">
-            <button
-              onClick={() => setShowHowItWorks(!showHowItWorks)}
+          <button
+            onClick={() => setShowHowItWorks(!showHowItWorks)}
               className="flex-1 flex items-center justify-between bg-white border border-slate-200 rounded-lg px-4 h-11 hover:bg-slate-50 transition-colors shadow-sm cursor-pointer"
-            >
-              <span className="font-semibold text-slate-800">¿Cómo usar?</span>
-              <ChevronDown
-                className={`h-5 w-5 text-slate-600 transition-transform ${showHowItWorks ? "rotate-180" : ""}`}
-              />
-            </button>
+          >
+            <span className="font-semibold text-slate-800">¿Cómo usar?</span>
+            <ChevronDown
+              className={`h-5 w-5 text-slate-600 transition-transform ${showHowItWorks ? "rotate-180" : ""}`}
+            />
+          </button>
 
             {/* Botón info SEO (abre modal) */}
             <Button
@@ -1667,6 +1667,15 @@ function HomeContent() {
           </div>
         </div>
       </main>
+
+      {/* Footer pequeño */}
+      <footer className="w-full py-4 mt-4">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <p className="text-xs text-slate-500">
+            © 2026 Marcos Pirchio Giani. Todos los derechos reservados.
+          </p>
+        </div>
+      </footer>
 
       {/* Modal de información SEO */}
       <Dialog.Root open={seoInfoOpen} onOpenChange={setSeoInfoOpen}>

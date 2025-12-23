@@ -54,7 +54,7 @@ function AccordionTrigger({
         <span
           aria-hidden
           className="ml-2 h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 data-[state=open]:rotate-180"
-          data-state={props["data-state"]}
+          data-state={(props as any)["data-state"]}
         >
           ▾
         </span>
