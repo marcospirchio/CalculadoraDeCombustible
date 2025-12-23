@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { Loader2, ChevronDown, CalendarIcon, Clock, ArrowUpDown, Bookmark, Menu, Trash2, Copy, Users, RotateCcw, ArrowRight } from "lucide-react"
+import { Loader2, ChevronDown, CalendarIcon, Clock, ArrowUpDown, Bookmark, Menu, Trash2, Copy, Users, RotateCcw, ArrowRight, MapPin, Fuel } from "lucide-react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
@@ -24,7 +24,7 @@ import { toast } from "sonner"
 import PlacesAutocomplete from "@/components/places-autocomplete"
 import ResultsPanel from "@/components/results-panel"
 import { vehicles } from "@/lib/vehicles"
-
+import { Analytics } from "@vercel/analytics/next"
 const SORTED_VEHICLES = [...vehicles].sort((a, b) => a.brand.localeCompare(b.brand))
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ""
@@ -39,6 +39,7 @@ function HomeContent() {
   const [originAddress, setOriginAddress] = useState("")
   const [destinationAddress, setDestinationAddress] = useState("")
   const [results, setResults] = useState<any>(null)
+  const [hasResults, setHasResults] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [destinationError, setDestinationError] = useState("")
@@ -275,24 +276,24 @@ function HomeContent() {
 
       // Prepare request body
       const requestBody: any = {
-        origin: {
-          location: {
-            latLng: {
+          origin: {
+            location: {
+              latLng: {
               latitude: originToUse.lat,
               longitude: originToUse.lng,
+              },
             },
           },
-        },
-        destination: {
-          location: {
-            latLng: {
+          destination: {
+            location: {
+              latLng: {
               latitude: destinationToUse.lat,
               longitude: destinationToUse.lng,
+              },
             },
           },
-        },
-        travelMode: "DRIVE",
-        extraComputations: ["TOLLS"],
+          travelMode: "DRIVE",
+          extraComputations: ["TOLLS"],
       }
 
       // Add time preference based on selection
@@ -327,7 +328,7 @@ function HomeContent() {
       if (!routeResponse.ok) {
         let errorMessage = "Error al calcular la ruta. Verifica tu API Key y que tenga las APIs habilitadas."
         try {
-          const errorData = await routeResponse.json()
+        const errorData = await routeResponse.json()
           console.error("API Error:", errorData)
           // Show more specific error if available
           if (errorData.error?.message) {
@@ -367,8 +368,8 @@ function HomeContent() {
         if (Array.isArray(prices) && prices.length > 0) {
           // Calculate total cost for each price option and select the lowest
           const priceCosts = prices.map((priceData) => {
-            const units = Number(priceData.units) || 0
-            const nanos = Number(priceData.nanos) || 0
+          const units = Number(priceData.units) || 0
+          const nanos = Number(priceData.nanos) || 0
             return units + nanos / 1e9
           })
           // Select the minimum price (e.g., Telepase instead of Cash)
@@ -429,25 +430,26 @@ function HomeContent() {
     
     const durationSeconds = roundTrip ? baseDurationSeconds * 2 : baseDurationSeconds
 
-    // Calculate fuel cost
-    const litersNeeded = (distanceKm * consumption) / 100
+      // Calculate fuel cost
+      const litersNeeded = (distanceKm * consumption) / 100
     const fuelCost = litersNeeded * fuelPrice
-    const totalCost = fuelCost + tollCost
+      const totalCost = fuelCost + tollCost
 
     // Format duration
-    const hours = Math.floor(durationSeconds / 3600)
-    const minutes = Math.floor((durationSeconds % 3600) / 60)
+      const hours = Math.floor(durationSeconds / 3600)
+      const minutes = Math.floor((durationSeconds % 3600) / 60)
 
-    setResults({
-      distance: distanceKm.toFixed(2),
-      duration: `${hours}h ${minutes}m`,
-      consumption,
-      litersNeeded: litersNeeded.toFixed(2),
-      fuelCost: fuelCost.toFixed(2),
-      tollCost: tollCost.toFixed(2),
-      totalCost: totalCost.toFixed(2),
+      setResults({
+        distance: distanceKm.toFixed(2),
+        duration: `${hours}h ${minutes}m`,
+        consumption,
+        litersNeeded: litersNeeded.toFixed(2),
+        fuelCost: fuelCost.toFixed(2),
+        tollCost: tollCost.toFixed(2),
+        totalCost: totalCost.toFixed(2),
       hasTelepase: telepase,
     })
+    setHasResults(true)
   }
 
   // Check if current trip is already saved
@@ -519,6 +521,7 @@ function HomeContent() {
     setOriginAddress("")
     setDestinationAddress("")
     setResults(null)
+    setHasResults(false)
     setError("")
     setDestinationError("")
     setIsRoundTrip(false)
@@ -1101,7 +1104,7 @@ function HomeContent() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-6">
+      <main className="max-w-7xl mx-auto px-2 sm:px-3 lg:px-4 py-6">
         <div className="mb-4">
           <button
             onClick={() => setShowHowItWorks(!showHowItWorks)}
@@ -1164,7 +1167,7 @@ function HomeContent() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
           {/* Left column - Form */}
           <div className="lg:col-span-1 space-y-4">
             <Card className="bg-white shadow-md border border-slate-200">
@@ -1215,36 +1218,36 @@ function HomeContent() {
                 {/* Origin and Destination with Swap Button */}
                 <div className="relative flex gap-2">
                   <div className="flex-1 max-w-[calc(100%-3rem)] space-y-3">
-                    {/* Origin */}
+                {/* Origin */}
                     <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-slate-800">Origen</label>
-                      <PlacesAutocomplete
+                  <label className="text-sm font-medium text-slate-800">Origen</label>
+                  <PlacesAutocomplete
                         key={`origin-${originAddress}`}
-                        placeholder="Ingresa punto de partida..."
+                    placeholder="Ingresa punto de partida..."
                         onLocationSelect={(coords, address) => {
                           setOrigin(coords)
                           setOriginAddress(address)
                         }}
                         value={originAddress}
                         resetKey={originAddress}
-                        apiKey={API_KEY}
-                      />
-                    </div>
-                    
-                    {/* Destination */}
+                    apiKey={API_KEY}
+                  />
+                </div>
+
+                {/* Destination */}
                     <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-slate-800">Destino</label>
-                      <PlacesAutocomplete
+                  <label className="text-sm font-medium text-slate-800">Destino</label>
+                  <PlacesAutocomplete
                         key={`destination-${destinationAddress}`}
-                        placeholder="Ingresa punto de llegada..."
+                    placeholder="Ingresa punto de llegada..."
                         onLocationSelect={(coords, address) => {
                           setDestination(coords)
                           setDestinationAddress(address)
                         }}
                         value={destinationAddress}
                         resetKey={destinationAddress}
-                        apiKey={API_KEY}
-                      />
+                    apiKey={API_KEY}
+                  />
                       {destinationError && (
                         <p className="text-xs text-red-600 mt-1">{destinationError}</p>
                       )}
@@ -1497,20 +1500,20 @@ function HomeContent() {
                 </div>
 
                 <div className="flex gap-2">
-                  <Button
+                <Button
                     onClick={() => handleCalculate()}
-                    disabled={loading || !origin || !destination}
+                  disabled={loading || !origin || !destination}
                     className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-md transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Calculando...
-                      </>
-                    ) : (
-                      "Calcular"
-                    )}
-                  </Button>
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Calculando...
+                    </>
+                  ) : (
+                    "Calcular"
+                  )}
+                </Button>
                   <Button
                     onClick={handleSaveTrip}
                     disabled={!origin || !destination}
@@ -1537,23 +1540,93 @@ function HomeContent() {
             </Card>
           </div>
 
-          {/* Right column - Results only */}
-          <div className="lg:col-span-2 space-y-6">
-            {results && (
-              <ResultsPanel
-                results={results}
-                passengers={passengers}
-                origin={origin}
-                destination={destination}
-                originAddress={originAddress}
-                destinationAddress={destinationAddress}
-                selectedBrand={selectedBrand}
-                selectedModel={selectedModel}
-                customConsumption={customConsumption}
-                fuelPrice={fuelPrice}
-                polyline={routePolyline}
-                googleScriptReady={googleScriptReady}
-              />
+          {/* Right column - Welcome screen or Results */}
+          <div className="lg:col-span-2 space-y-4">
+            {!hasResults ? (
+              /* Welcome Screen */
+              <div className="space-y-4">
+                {/* Hero Banner */}
+                <div className="hidden lg:block relative overflow-hidden rounded-lg w-full">
+                  <img 
+                    src="/banner-bienvenid-rutear.png" 
+                    alt="Planifica tu Ruta, Ahorra en tu Viaje" 
+                    className="block w-full h-[340px] md:h-[390px] object-cover"
+                    style={{ width: '100%', display: 'block', objectFit: 'cover' }}
+                  />
+                  {/* Text Overlay */}
+                  <div className="absolute top-0 left-0 right-0 flex flex-col items-center justify-center text-center px-4 pt-4 md:pt-5">
+                    <h2 className="text-lg md:text-xl lg:text-2xl font-bold text-slate-800 mb-1 md:mb-1.5 drop-shadow-sm">
+                      Planifica tu Ruta, Ahorra en tu Viaje
+                    </h2>
+                    <p className="text-xs md:text-sm text-slate-700 max-w-xl drop-shadow-sm">
+                      Calcula costos, tiempo y combustible con precisión.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Features Grid */}
+                <div className="hidden lg:grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
+                  <Card className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                    <CardContent className="p-3">
+                      <div className="flex flex-col items-center text-center space-y-1.5">
+                        <div className="p-1.5 bg-blue-100 rounded-full">
+                          <MapPin className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <h3 className="text-sm font-semibold text-slate-800">Rutas Optimizadas</h3>
+                        <p className="text-xs text-slate-600 leading-tight">
+                          Obtén la mejor ruta con cálculo preciso de distancia y tiempo de viaje.
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                    <CardContent className="p-3">
+                      <div className="flex flex-col items-center text-center space-y-1.5">
+                        <div className="p-1.5 bg-green-100 rounded-full">
+                          <Fuel className="h-4 w-4 text-green-600" />
+                        </div>
+                        <h3 className="text-sm font-semibold text-slate-800">Cálculo de Combustible</h3>
+                        <p className="text-xs text-slate-600 leading-tight">
+                          Calcula el consumo exacto de combustible según tu vehículo y el precio actual.
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                    <CardContent className="p-3">
+                      <div className="flex flex-col items-center text-center space-y-1.5">
+                        <div className="p-1.5 bg-orange-100 rounded-full">
+                          <Clock className="h-4 w-4 text-orange-600" />
+                        </div>
+                        <h3 className="text-sm font-semibold text-slate-800">Estimación de Tiempo</h3>
+                        <p className="text-xs text-slate-600 leading-tight">
+                          Conoce la duración exacta de tu viaje considerando el tráfico actual.
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            ) : (
+              /* Results Panel */
+              results && (
+                <ResultsPanel
+                  results={results}
+                  passengers={passengers}
+                  origin={origin}
+                  destination={destination}
+                  originAddress={originAddress}
+                  destinationAddress={destinationAddress}
+                  selectedBrand={selectedBrand}
+                  selectedModel={selectedModel}
+                  customConsumption={customConsumption}
+                  fuelPrice={fuelPrice}
+                  polyline={routePolyline}
+                  googleScriptReady={googleScriptReady}
+                />
+              )
             )}
           </div>
         </div>
@@ -1564,12 +1637,15 @@ function HomeContent() {
 
 export default function Home() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-slate-200 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-      </div>
-    }>
-      <HomeContent />
-    </Suspense>
+    <>
+      <Suspense fallback={
+        <div className="min-h-screen bg-slate-200 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        </div>
+      }>
+        <HomeContent />
+      </Suspense>
+      <Analytics />
+    </>
   )
 }
