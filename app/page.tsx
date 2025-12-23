@@ -16,7 +16,8 @@ import {
 } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { Loader2, ChevronDown, CalendarIcon, Clock, ArrowUpDown, Bookmark, Menu, Trash2, Copy, Users, RotateCcw, ArrowRight, MapPin, Fuel } from "lucide-react"
+import * as Dialog from "@radix-ui/react-dialog"
+import { Loader2, ChevronDown, CalendarIcon, Clock, ArrowUpDown, Bookmark, Menu, Trash2, Copy, Users, RotateCcw, ArrowRight, MapPin, Fuel, Info } from "lucide-react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
@@ -78,6 +79,7 @@ function HomeContent() {
     savedAt: string
   }>>([])
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [seoInfoOpen, setSeoInfoOpen] = useState(false)
   const hasProcessedUrlParams = useRef(false)
   const shouldAutoCalculate = useRef(false)
 
@@ -510,8 +512,14 @@ function HomeContent() {
     return foundTrip?.id || null
   }
 
-  // Reset all calculator parameters
+  // Reset all calculator parameters (full reset with feedback)
   const handleReset = () => {
+    performReset()
+    toast.success("Calculadora restablecida")
+  }
+
+  // Core reset logic shared by logo click (sin toast) y botón de reset
+  const performReset = () => {
     setSelectedBrand("")
     setSelectedModel("")
     setCustomConsumption("")
@@ -532,7 +540,6 @@ function HomeContent() {
     setBaseRouteData(null)
     setTimeType("now")
     setSelectedDateTime(undefined)
-    toast.success("Calculadora restablecida")
   }
 
   // Save trip to localStorage (toggle: save if not saved, unsave if already saved)
@@ -969,9 +976,16 @@ function HomeContent() {
 
   return (
     <div className="min-h-screen bg-slate-200">
-      <header className="sticky top-0 z-50 border-b border-slate-300 bg-white shadow-sm">
+      <header className="sticky top-0 z-50 border-slate-300 bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-3 flex items-center justify-between">
-          <img src="/rutear_logo.png" alt="RuteAR Logo" className="h-16 w-auto drop-shadow-lg" />
+          <button
+            type="button"
+            onClick={performReset}
+            className="flex items-center cursor-pointer focus:outline-none"
+            aria-label="Volver al inicio de RuteAR"
+          >
+            <img src="/rutear_logo.png" alt="RuteAR Logo" className="h-16 w-auto drop-shadow-lg pointer-events-none" />
+          </button>
           <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="h-10 w-10 hover:bg-slate-100 hover:text-slate-900">
@@ -1106,15 +1120,29 @@ function HomeContent() {
 
       <main className="max-w-7xl mx-auto px-2 sm:px-3 lg:px-4 py-6">
         <div className="mb-4">
-          <button
-            onClick={() => setShowHowItWorks(!showHowItWorks)}
-            className="w-full flex items-center justify-between bg-white border border-slate-200 rounded-lg px-4 py-3 hover:bg-slate-50 transition-colors shadow-sm"
-          >
-            <span className="font-semibold text-slate-800">¿Cómo usar?</span>
-            <ChevronDown
-              className={`h-5 w-5 text-slate-600 transition-transform ${showHowItWorks ? "rotate-180" : ""}`}
-            />
-          </button>
+          <div className="flex gap-2 items-stretch">
+            <button
+              onClick={() => setShowHowItWorks(!showHowItWorks)}
+              className="flex-1 flex items-center justify-between bg-white border border-slate-200 rounded-lg px-4 h-11 hover:bg-slate-50 transition-colors shadow-sm cursor-pointer"
+            >
+              <span className="font-semibold text-slate-800">¿Cómo usar?</span>
+              <ChevronDown
+                className={`h-5 w-5 text-slate-600 transition-transform ${showHowItWorks ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {/* Botón info SEO (abre modal) */}
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => setSeoInfoOpen(true)}
+              className="h-11 w-11 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 shadow-sm"
+              title="Información sobre el cálculo, tarifas y consumo"
+            >
+              <Info className="h-5 w-5" />
+            </Button>
+          </div>
 
           {showHowItWorks && (
             <div className="mt-2 bg-white border border-slate-200 border-t-0 rounded-b-lg p-6 shadow-sm">
@@ -1446,7 +1474,7 @@ function HomeContent() {
                     placeholder="ej: 1700"
                     value={fuelPrice}
                     onChange={(e) => setFuelPrice(e.target.value)}
-                    className="text-slate-800 border-slate-300 bg-white"
+                    className="text-slate-800 border-slate-300 bg-white cursor-pointer"
                   />
                 </div>
 
@@ -1482,7 +1510,7 @@ function HomeContent() {
                         setPassengers(numValue)
                       }
                     }}
-                    className="text-slate-800 border-slate-300 bg-white"
+                    className="text-slate-800 border-slate-300 bg-white cursor-pointer"
                   />
                 </div>
 
@@ -1640,46 +1668,61 @@ function HomeContent() {
         </div>
       </main>
 
-      {/* SEO Content - Semántico pero discreto */}
-      <footer className="bg-slate-100 py-12 px-4 mt-16">
-        <div className="max-w-4xl mx-auto space-y-8 text-slate-600">
-          <section>
-            <h1 className="text-2xl font-bold text-slate-800 mb-4">
-              Calculadora de Costos de Viaje y Peajes en Argentina
-            </h1>
-            <p className="text-sm leading-relaxed">
-              RuteAR es la herramienta más completa para calcular el costo real de tus viajes en auto por Argentina. 
-              Incluye cálculo preciso de consumo de combustible según el modelo de tu vehículo, tarifas actualizadas de peajes 
-              y la posibilidad de dividir gastos entre pasajeros.
-            </p>
-          </section>
+      {/* Modal de información SEO */}
+      <Dialog.Root open={seoInfoOpen} onOpenChange={setSeoInfoOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 transition-opacity duration-300 ease-in-out" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 grid w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 gap-4 border bg-white p-6 shadow-lg rounded-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:scale-95 data-[state=open]:scale-100 transition-all duration-300 ease-in-out">
+            <Dialog.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2 disabled:pointer-events-none cursor-pointer">
+              <span className="sr-only">Cerrar</span>
+              <span className="text-xl leading-none text-slate-500">&times;</span>
+            </Dialog.Close>
 
-          <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-3">
-              ¿Cómo calcular el consumo de nafta de mi auto?
-            </h2>
-            <p className="text-sm leading-relaxed">
-              El consumo de combustible varía según el modelo y marca de tu vehículo. En RuteAR encontrarás una base de datos 
-              actualizada con el consumo promedio de las principales marcas como Fiat, Volkswagen, Toyota, Ford, Chevrolet y más. 
-              Cada modelo tiene su consumo específico medido en litros cada 100 kilómetros. Si tu auto no está en la lista, 
-              puedes ingresar el consumo manualmente. El cálculo considera la distancia total del viaje, incluyendo ida y vuelta 
-              si lo configurás, y te muestra el costo exacto según el precio actual de la nafta.
-            </p>
-          </section>
+            <Dialog.Title className="sr-only">
+              Información sobre el cálculo, tarifas y consumo
+            </Dialog.Title>
 
-          <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-3">
-              Precios de Peajes y Telepase 2025
-            </h2>
-            <p className="text-sm leading-relaxed">
-              Las principales rutas de Argentina como la Panamericana, Ruta 2, Ruta 9, Autopista del Oeste y otras rutas nacionales 
-              tienen peajes con tarifas actualizadas para 2025. Con RuteAR podés calcular el costo total de peajes en tu ruta. 
-              Además, si tenés Telepase configurado, la calculadora aplica automáticamente el descuento del 30% en todos los peajes 
-              que aceptan este sistema de pago electrónico, ayudándote a ahorrar en cada viaje.
-            </p>
-          </section>
-        </div>
-      </footer>
+            <div className="max-h-[70vh] overflow-y-auto pr-1 space-y-6 text-gray-500 text-sm">
+              <section>
+                <h1 className="text-lg sm:text-xl font-semibold text-gray-700 mb-2">
+                  Calculadora de Costos de Viaje y Peajes en Argentina
+                </h1>
+                <p className="leading-relaxed">
+                  RuteAR es una herramienta pensada para ayudarte a estimar el costo real de tus viajes en auto por Argentina. 
+                  Incluye cálculo de consumo de combustible según el modelo de tu vehículo, tarifas de peajes actualizadas 
+                  y la posibilidad de dividir gastos entre pasajeros para organizar mejor cada salida.
+                </p>
+              </section>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <section>
+                  <h2 className="text-base sm:text-lg font-semibold text-gray-700 mb-1.5">
+                    ¿Cómo calcular el consumo de nafta de mi auto?
+                  </h2>
+                  <p className="leading-relaxed">
+                    El consumo de combustible varía según el modelo y la marca del vehículo. En RuteAR trabajamos con valores 
+                    promedio de marcas como Fiat, Volkswagen, Toyota, Ford, Chevrolet y otras, expresados en litros cada 100 km. 
+                    Si tu auto no aparece en la lista, siempre podés ingresar el consumo manualmente y obtener una estimación 
+                    ajustada al precio actual de la nafta.
+                  </p>
+                </section>
+
+                <section>
+                  <h2 className="text-base sm:text-lg font-semibold text-gray-700 mb-1.5">
+                    Precios de Peajes y Telepase 2025
+                  </h2>
+                  <p className="leading-relaxed">
+                    Rutas como la Panamericana, Ruta 2, Ruta 9, Autopista del Oeste y otras vías principales cuentan con peajes 
+                    con tarifas actualizadas para 2025. RuteAR te permite estimar el costo total de peajes en tu recorrido y, 
+                    si tenés Telepase, aplica el descuento correspondiente en los tramos donde está disponible, para que puedas 
+                    anticipar mejor el gasto total de tu viaje.
+                  </p>
+                </section>
+              </div>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   )
 }

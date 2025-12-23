@@ -195,7 +195,7 @@ export default function PlacesAutocomplete({
             <button
               key={suggestion.place_id}
               onClick={() => handleSelectSuggestion(suggestion.place_id, suggestion.description)}
-              className="w-full text-left px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-700 last:border-b-0 transition-colors focus:outline-none focus:bg-slate-100 dark:focus:bg-slate-700"
+              className="w-full text-left px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-700 last:border-b-0 transition-colors focus:outline-none focus:bg-slate-100 dark:focus:bg-slate-700 cursor-pointer"
               type="button"
             >
               <p className="text-sm font-medium text-slate-900 dark:text-white">
