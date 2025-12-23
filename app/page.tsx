@@ -1307,10 +1307,10 @@ function HomeContent() {
                     <SelectTrigger className="w-full text-slate-800 border-slate-300 bg-white">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="now">Salir ahora</SelectItem>
-                      <SelectItem value="departure">Salir a las...</SelectItem>
-                      <SelectItem value="arrival">Llegar a las...</SelectItem>
+                    <SelectContent className="[&>*]:focus:bg-blue-50 [&>*]:focus:text-blue-700 [&>*[data-highlighted]]:bg-blue-50 [&>*[data-highlighted]]:text-blue-700">
+                      <SelectItem value="now" className="focus:bg-blue-50 focus:text-blue-700 data-[highlighted]:bg-blue-50 data-[highlighted]:text-blue-700">Salir ahora</SelectItem>
+                      <SelectItem value="departure" className="focus:bg-blue-50 focus:text-blue-700 data-[highlighted]:bg-blue-50 data-[highlighted]:text-blue-700">Salir a las...</SelectItem>
+                      <SelectItem value="arrival" className="focus:bg-blue-50 focus:text-blue-700 data-[highlighted]:bg-blue-50 data-[highlighted]:text-blue-700">Llegar a las...</SelectItem>
                     </SelectContent>
                   </Select>
 
@@ -1360,9 +1360,16 @@ function HomeContent() {
                               }}
                               disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                               initialFocus
+                              classNames={{
+                                today: "!bg-transparent !text-slate-900 data-[selected=true]:!bg-blue-600 data-[selected=true]:!text-white hover:!bg-blue-50",
+                              }}
+                              className="[&_.rdp-day_selected]:bg-blue-600 [&_.rdp-day_selected]:text-white [&_.rdp-day:hover]:bg-blue-50 [&_.rdp-day:hover]:text-blue-700 [&_.rdp-day_range_start]:bg-blue-600 [&_.rdp-day_range_end]:bg-blue-600 [&_.rdp-day_range_middle]:bg-blue-50 [&_.rdp-day_range_middle]:text-blue-700"
                             />
-                            <div className="flex items-center gap-2 border-t pt-3">
-                              <Clock className="h-4 w-4 text-slate-600" />
+                            <div className="border-t pt-3 space-y-2">
+                              <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                                <Clock className="h-4 w-4 text-blue-600" />
+                                Selecciona la hora
+                              </Label>
                               <Input
                                 type="time"
                                 value={
@@ -1388,7 +1395,8 @@ function HomeContent() {
                                     }
                                   }
                                 }}
-                                className="flex-1"
+                                className="w-full border-blue-300 focus:border-blue-500 focus:ring-blue-500 cursor-pointer"
+                                placeholder="HH:MM"
                               />
                             </div>
                           </div>
