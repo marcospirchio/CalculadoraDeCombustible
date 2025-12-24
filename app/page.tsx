@@ -225,6 +225,9 @@ function HomeContent() {
   }, [origin, destination])
 
   const handleCalculate = async (customOrigin?: { lat: number; lng: number } | null, customDestination?: { lat: number; lng: number } | null) => {
+    // Prevent multiple simultaneous calculations
+    if (loading) return
+    
     setError("")
     setLoading(true)
 
